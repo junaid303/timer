@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+
+    *{
+        font-family: monospace;
+        box-sizing: border-box;
+    }
+
+    #display{
+        transform: translate(-10%, 80%);
+        display: inline-block;
+    }
+
+    #clock {
+        font-size: 80px;
+    }
+
+    #subClock{
+        font-size: 30px;
+    }
+
+    #alarmForm {
+        background-color: rgb(212, 207, 207);
+        width: 30%;
+        border-bottom: 1px solid;
+        border-left: 1px solid;
+        border-right: 1px solid;
+        transform: translateY(-140%);
+        display: none;
+    }
+
+    #alarmTitle {
+        text-align: left;
+        padding: 5px;
+        display: inline-block;
+        width: 92%;
+    }
+
+    #closeIcon {
+        width: 8%;
+        padding: 5px;
+        display: inline-block;
+        text-align: center;
+        cursor: pointer;
+    }
+
+    #alarmTitleBorder{
+        border: 1px solid;
+    }
+    
+
+    #submitAlarm{
+        margin-bottom: 10px;
+        padding: 5px;
+        cursor: pointer;
+    }
+
+    #setAlarm{
+        margin: 20px;
+        padding: 10px;
+        cursor: pointer;
+    }
+
+    #timeSign{
+        font-size: 30px;
+    }
+
+    #alarms{
+        float: left;
+    }
+
+    th, td {
+        border: 1px solid black;
+        padding: 15px;
+    }
+
+</style>
+
+<body>
+    <audio id="myAudio">
+        <source src="./assets/alarm.mp3" type="audio/mpeg">
+    </audio>
+    <table id="alarms">
+        <thead>
+            <tr>
+                <th colspan="3">alarms</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>name</td>
+                <td>time</td>
+                <td>remove</td>
+            </tr>
+        </tbody>
+    </table>
+    <center>
+        <div id="display">
+            <h1 id="clock"><span id="hours">00</span> : <span id="min">00</span> : <span id="sec">00</span> <span id="timeSign"></span></h1>
+            <h1 id="subClock"><span id="day">day</span> - <span id="month">month</span> <span id="date">date</span> . <span id="year"> year</span></h1>
+            <button id="setAlarm" onclick="setAlarm()">set alarm</button>
+        </div>
+    </center>
+    <center>
+        <div id="alarmForm">
+            <h3 id="alarmTitleBorder"><span id="alarmTitle">Edit Alarm</span><button id="closeIcon" onclick="handle()">X</button></h3>
+            <label for="alarmName">alarm name : </label>
+            <input type="text" name="alarmName" id="alarmName" maxlength="10"/><br/><br/>
+            <label for="alarmInput">enter time : </label>
+            <input type="time" name="alarmInput" id="alarmInput" required/><br/><br/>
+            <button id="submitAlarm" onclick="addAlarm()">set</button>
+        </div>
+    </center>
+</body>
+<script>
+
+    var alarmsTime = [], playAlarm = 0, dateInstance, hours, minutes, seconds, day, date, month, year, timerID, sign, alarms=[], alarmsCount = 0;
+
+    main();
+
+    //display existing alarms
+    if(localStorage.getItem("alarms")){
+        alarms = JSON.parse(localStorage.getItem("alarms"));
+        for(let i=0; i<alarms.length; i++){
+            alarmsTime.push(alarms[i].time);
+        }
+        displayAlarms(alarms);
+    }
+
+    function main(){
+        timerID = setInterval(() => {
+            dateInstance = new Date();
+            day = dateInstance.getDay();
+            day = (day == 1) ? "MON" : (day == 2) ? "TUE" : (day == 3) ? "WED" : (day == 4) ? "THU" : (day == 5) ? "FRI" : (day == 6) ? "SAT" : "SUN";
+            currentDate = dateInstance.getDate();
+            hours = dateInstance.getHours();
+            minutes = dateInstance.getMinutes();
+            seconds = dateInstance.getSeconds();
+            date = dateInstance.getDate();
+            month = dateInstance.getMonth();
+            month = (month == 0) ? "Jan" : (month == 1) ? "Feb" : (month == 2) ? "Mar" : (month == 3) ? "Apr" : (month == 4) ? "May" : (month == 5) ? "Jun" : (month == 6) ? "Jul" : "Aug";
+            year = dateInstance.getFullYear();
+            document.getElementById("day").innerText = `${day}`;
+            document.getElementById("month").innerText = `${month}`;
+            document.getElementById("date").innerText = `${date}`;
+            document.getElementById("year").innerText = `${year}`;
+            // if (hours >= 12) {
+            //     if (hours == 12) {
+            //         document.getElementById("hours").innerText = `${String(hours).padStart(2, '0')}`;
+            //     } else {
+            //         document.getElementById("hours").innerText = `${String(hours - 12).padStart(2, '0')}`;
+            //     }
+            //     sign = `PM`;
+            // } else {
+            //     if (hours == 0) {
+            //         document.getElementById("hours").innerText = `${String(hours + 12).padStart(2, '0')}`;
+            //     } else {
+            //         document.getElementById("hours").innerText = `${String(hours).padStart(2, '0')}`;
+            //     }
+            //     sign = `AM`;
+            // }
+            document.getElementById("hours").innerText = `${String(hours).padStart(2, '0')}`;
+            document.getElementById("min").innerText = `${String(minutes).padStart(2, '0')}`;
+            document.getElementById("sec").innerText = `${String(seconds, sign).padStart(2, '0')}`;
+            //document.getElementById("timeSign").innerText = `${sign}`;
+            if(seconds<=5){
+                alarm();
+            }
+            
+        }, 1000);
+    }
+
+    function alarm(){
+        for(let i = 0; i<alarmsTime.length; i++){
+            if(alarmsTime[i].split(":")[0]==hours && alarmsTime[i].split(":")[1]==minutes ){
+                document.getElementById("myAudio").play();
+                if(seconds==5){
+                    document.getElementById("myAudio").pause();
+                }
+            }
+        }
+    }
+
+    function setAlarm(){
+        document.getElementById("alarmForm").style.display = `block`;
+        document.getElementById("display").style.opacity = `0.2`; 
+    }
+
+    function handle(){
+        document.getElementById("alarmForm").style.display = `none`;
+        document.getElementById("display").style.opacity = `1`;
+    }
+    
+      function addAlarm(){
+        let obj = {}; 
+        document.getElementById("alarmForm").style.display = `none`;
+        document.getElementById("display").style.opacity = `1`;
+        if(!(document.getElementById("alarmName").value && document.getElementById("alarmInput").value)){
+            alert("must fill all fields!");
+            return;
+        }
+        let alarmName = document.getElementById("alarmName").value;
+        let alarmTime = document.getElementById("alarmInput").value;
+
+        obj.name = alarmName;
+        obj.time = alarmTime;
+        
+        //adding new alarm to alarmsTime
+        alarmsTime.push(obj.time);
+
+        //display newly added alarm
+        displayAlarms(obj);
+    
+    }
+
+    function displayAlarms(obj){
+        //exiting alarms are shown
+        if(alarms[0]){
+            for(let i=0; i<alarms.length; i++){
+                let alarmTable = document.getElementById("alarms");
+                let tr = document.createElement("tr");
+                alarmTable.appendChild(tr);
+                for(let j=0; j<3; j++){
+                    let td = document.createElement("td");
+                    if(j==0){
+                        td.innerText = alarms[i].name;
+                    }
+                    if(j==1){
+                        td.innerText = alarms[i].time;
+                    }
+                    if(j==2){
+                        let button = document.createElement("button");
+                        button.innerText = `X`;
+                        button.addEventListener("click", deleteAlarm);
+                        button.id = `${++alarmsCount}`;
+                        button.style.color = `red`;
+                        button.style.marginLeft = `7px`;
+                        td.appendChild(button);
+                    }
+                    tr.appendChild(td);
+                }
+            }
+            alarms = [];
+        } else {
+            alarms.push(obj);
+            for(let i=0; i<alarms.length; i++){
+                let alarmTable = document.getElementById("alarms");
+                let tr = document.createElement("tr");
+                alarmTable.appendChild(tr);
+                for(let j=0; j<3; j++){
+                    let td = document.createElement("td");
+                    if(j==0){
+                        td.innerText = alarms[i].name;
+                    }
+                    if(j==1){
+                        td.innerText = alarms[i].time;
+                    }
+                    if(j==2){
+                        let button = document.createElement("button");
+                        button.innerText = `X`;
+                        button.addEventListener("click", deleteAlarm);
+                        button.id = `${++alarmsCount}`;
+                        button.style.color = `red`;
+                        button.style.marginLeft = `7px`;
+                        td.appendChild(button);
+                    }
+                    tr.appendChild(td);
+                }
+            }
+            if(JSON.parse(localStorage.getItem("alarms"))){
+                alarms = JSON.parse(localStorage.getItem("alarms"));
+                alarms.push(obj);
+            }
+            localStorage.setItem("alarms", JSON.stringify(alarms));
+            alarms = [];
+        }
+    }
+
+    function deleteAlarm(){
+        let id = event.target.id;
+        let deleteEl = document.getElementById(id);
+        deleteEl.parentElement.parentElement.remove();
+
+        //remove from localstorage
+        alarms = JSON.parse(localStorage.getItem("alarms"));
+        let toDelete = Number(id);
+        for(let i=id-1; i<alarms.length; i++){
+            alarms[i] = alarms[i+1];
+        }
+        alarms = alarms.splice(0, alarms.length-1);
+        localStorage.setItem("alarms", JSON.stringify(alarms));
+        alarms = [];
+    }
+
+</script>
+
+</html>
+
+
+<!---
+- show a success message for adding an alarm 
+- render a table that shows alarm information side by side
+- use local storage
+-->
